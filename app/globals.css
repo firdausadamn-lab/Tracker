@@ -1,0 +1,49 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    font-family: var(--font-outfit), system-ui, sans-serif;
+  }
+}
+
+.grain {
+  position: relative;
+}
+.grain::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.05;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+}
+
+@keyframes pulse-dot {
+  0% { box-shadow: 0 0 0 0 rgba(193, 102, 63, 0.45); }
+  70% { box-shadow: 0 0 0 8px rgba(193, 102, 63, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(193, 102, 63, 0); }
+}
+.pulse-dot {
+  animation: pulse-dot 2.4s infinite;
+}
+
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(6px) scale(0.94); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.rise-in {
+  animation: rise-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulse-dot,
+  .rise-in {
+    animation: none !important;
+  }
+}
