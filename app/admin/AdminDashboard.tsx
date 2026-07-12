@@ -30,16 +30,27 @@ function Check({ done }: { done: boolean }) {
   );
 }
 
+type Hud = {
+  level: number;
+  xpInto: number;
+  xpNeed: number;
+  totalXp: number;
+  current: number;
+  best: number;
+};
+
 export default function AdminDashboard({
   initialHabits,
   initialLists,
   initialTasks,
   todayKey,
+  hud,
 }: {
   initialHabits: Habit[];
   initialLists: ListRow[];
   initialTasks: Task[];
   todayKey: string;
+  hud: Hud;
 }) {
   const router = useRouter();
   const [habits, setHabits] = useState<Habit[]>(initialHabits);
@@ -160,6 +171,34 @@ export default function AdminDashboard({
           Log out
         </button>
       </header>
+
+      <div className="mt-5 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+        <div className="rounded-[10px] border border-border bg-elev px-3.5 py-3">
+          <div className="font-mono text-[9px] uppercase tracking-[0.18em] text-inkfaint">Level</div>
+          <div className="font-mono text-[22px] font-medium leading-none text-ink">{hud.level}</div>
+        </div>
+        <div className="rounded-[10px] border border-border bg-elev px-3.5 py-3">
+          <div className="font-mono text-[9px] uppercase tracking-[0.18em] text-inkfaint">XP</div>
+          <div className="font-mono text-[15px] leading-none text-done">
+            {hud.xpInto}
+            <span className="text-inkfaint"> / {hud.xpNeed}</span>
+          </div>
+          <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-elev2">
+            <div
+              className="h-full rounded-full bg-done"
+              style={{ width: `${hud.xpNeed ? Math.round((hud.xpInto / hud.xpNeed) * 100) : 0}%` }}
+            />
+          </div>
+        </div>
+        <div className="rounded-[10px] border border-border bg-elev px-3.5 py-3">
+          <div className="font-mono text-[9px] uppercase tracking-[0.18em] text-inkfaint">Streak</div>
+          <div className="font-mono text-[22px] font-medium leading-none text-done">{hud.current}</div>
+        </div>
+        <div className="rounded-[10px] border border-border bg-elev px-3.5 py-3">
+          <div className="font-mono text-[9px] uppercase tracking-[0.18em] text-inkfaint">Best</div>
+          <div className="font-mono text-[22px] font-medium leading-none text-ink">{hud.best}</div>
+        </div>
+      </div>
 
       <section className="border-b border-border py-8">
         <h2 className="mb-4 font-mono text-[11px] uppercase tracking-[0.12em] text-inkfaint">Habits</h2>
