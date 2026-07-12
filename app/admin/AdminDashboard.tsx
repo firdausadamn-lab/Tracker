@@ -174,11 +174,11 @@ export default function AdminDashboard({
                   <div className="font-display text-[17px] font-semibold text-ink">{h.name}</div>
                   <div className="flex items-center gap-3.5">
                     <div className="text-right">
-                      <div className="font-mono text-[16px] font-medium leading-none text-accent">{current}</div>
+                      <div className="font-mono text-[16px] font-medium leading-none text-done">{current}</div>
                       <div className="mt-1 font-mono text-[9px] uppercase text-inkfaint">Streak</div>
                     </div>
                     <div className="text-right">
-                      <div className="font-mono text-[16px] font-medium leading-none text-accent">{best}</div>
+                      <div className="font-mono text-[16px] font-medium leading-none text-done">{best}</div>
                       <div className="mt-1 font-mono text-[9px] uppercase text-inkfaint">Best</div>
                     </div>
                     <button
@@ -203,7 +203,7 @@ export default function AdminDashboard({
                         title={key}
                         disabled={pending}
                         className={`h-4 w-4 flex-shrink-0 rounded-[3px] border transition active:scale-90 ${
-                          on ? "border-accent bg-accent" : "border-border bg-elev2 hover:border-inkdim"
+                          on ? "border-done bg-done" : "border-border bg-elev2 hover:border-inkdim"
                         } ${isToday ? "ring-1 ring-inkdim" : ""}`}
                       />
                     );
@@ -222,11 +222,11 @@ export default function AdminDashboard({
             value={newHabit}
             onChange={(e) => setNewHabit(e.target.value)}
             placeholder="New habit, e.g. Train"
-            className="flex-1 rounded-[8px] border border-border bg-elev2 px-3.5 py-2 text-[14px] text-ink outline-none focus:border-accent"
+            className="flex-1 rounded-[8px] border border-border bg-elev2 px-3.5 py-2 text-[14px] text-ink outline-none focus:border-done"
           />
           <button
             type="submit"
-            className="rounded-[8px] border border-accent px-4 py-2 font-mono text-[13px] text-accent transition active:translate-y-[1px] active:scale-[0.98]"
+            className="rounded-[8px] border border-done px-4 py-2 font-mono text-[13px] text-done transition active:translate-y-[1px] active:scale-[0.98]"
           >
             Add
           </button>
@@ -241,11 +241,11 @@ export default function AdminDashboard({
             value={newList}
             onChange={(e) => setNewList(e.target.value)}
             placeholder="New list, e.g. Fitness, Work, Study"
-            className="flex-1 rounded-[8px] border border-border bg-elev2 px-3.5 py-2 text-[14px] text-ink outline-none focus:border-accent"
+            className="flex-1 rounded-[8px] border border-border bg-elev2 px-3.5 py-2 text-[14px] text-ink outline-none focus:border-done"
           />
           <button
             type="submit"
-            className="rounded-[8px] border border-accent px-4 py-2 font-mono text-[13px] text-accent transition active:translate-y-[1px] active:scale-[0.98]"
+            className="rounded-[8px] border border-done px-4 py-2 font-mono text-[13px] text-done transition active:translate-y-[1px] active:scale-[0.98]"
           >
             Add list
           </button>
@@ -328,18 +328,18 @@ function ListPanel({
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder={`Log something for ${list.name}`}
-          className="min-w-[160px] flex-1 rounded-[8px] border border-border bg-elev2 px-3.5 py-2 text-[14px] text-ink outline-none focus:border-accent"
+          className="min-w-[160px] flex-1 rounded-[8px] border border-border bg-elev2 px-3.5 py-2 text-[14px] text-ink outline-none focus:border-done"
         />
         <input
           type="date"
           value={due}
           onChange={(e) => setDue(e.target.value)}
           title="Optional due date, leave blank to log it as done today, set a date to make it a goal"
-          className="rounded-[8px] border border-border bg-elev2 px-3 py-2 font-mono text-[13px] text-ink outline-none focus:border-accent"
+          className="rounded-[8px] border border-border bg-elev2 px-3 py-2 font-mono text-[13px] text-ink outline-none focus:border-done"
         />
         <button
           type="submit"
-          className="rounded-[8px] border border-accent px-4 py-2 font-mono text-[13px] text-accent transition active:translate-y-[1px] active:scale-[0.98]"
+          className="rounded-[8px] border border-done px-4 py-2 font-mono text-[13px] text-done transition active:translate-y-[1px] active:scale-[0.98]"
         >
           {due ? "Set goal" : "Log it"}
         </button>
@@ -356,7 +356,7 @@ function ListPanel({
                 <button
                   onClick={() => onToggleTask(t.id, !t.done)}
                   className={`flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-[4px] border transition active:scale-90 ${
-                    t.done ? "border-accent bg-accent" : "border-inkfaint"
+                    t.done ? "border-done bg-done" : "border-inkfaint"
                   }`}
                 >
                   <Check done={t.done} />
@@ -380,7 +380,7 @@ function ListPanel({
           const isToday = key === todayKey;
           return (
             <div key={key}>
-              <div className={`mb-1.5 font-mono text-[10.5px] uppercase tracking-[0.06em] ${isToday ? "text-accent" : "text-inkfaint"}`}>
+              <div className={`mb-1.5 font-mono text-[10.5px] uppercase tracking-[0.06em] ${isToday ? "text-done" : "text-inkfaint"}`}>
                 {isToday ? "Today, " : ""}
                 {fmt(d)}
               </div>
@@ -391,7 +391,7 @@ function ListPanel({
                     <button
                       onClick={() => onToggleTask(t.id, !t.done)}
                       className={`flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-[4px] border transition active:scale-90 ${
-                        t.done ? "border-accent bg-accent" : "border-inkfaint"
+                        t.done ? "border-done bg-done" : "border-inkfaint"
                       }`}
                     >
                       <Check done={t.done} />

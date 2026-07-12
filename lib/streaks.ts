@@ -63,3 +63,70 @@ export function dueLabel(diff: number): string {
   if (diff === 1) return "due tomorrow";
   return `due in ${diff}d`;
 }
+
+// ---------------------------------------------------------------------------
+// Contribution grid
+// ---------------------------------------------------------------------------
+
+export type HabitMeta = {
+  id: string;
+  created_at: string; // ISO timestamp; only the date portion matters here
+};
+
+export type DayCell = {
+  date: string; // YYYY-MM-DD
+  habitsDone: number;
+  habitsTotal: number; // habits that existed on/before this day
+  isFullyDone: boolean;
+};
+
+// The date a habit started counting toward the grid (its creation day).
+function habitStartKey(h: HabitMeta): string {
+  return h.created_at.slice(0, 10);
+}
+
+// Build one cell per day. A habit only counts toward a day's total once it
+// exists (created_at <= day), so adding a new habit today never retroactively
+// un-greens past days. A day is fully done only when every habit that existed
+// that day was completed, and at least one habit existed.
+export function buildContribution(
+  days: Date[],
+  habits: HabitMeta[],
+  doneByDay: Map<string, Set<string>>
+): DayCell[] {
+  return days.map((d) => {
+    const key = toKey(d);
+    let total = 0;
+    for (const h of habits) {
+      if (habitStartKey(h) <= key) total++;
+    }
+
+    const doneIds = doneByDay.get(key);
+    let done = 0;
+    if (doneIds) {
+      for (const h of habits) {
+        if (habitStartKey(h) <= key && doneIds.has(h.id)) done++;
+      }
+    }
+
+    return {
+      date: key,
+      habitsDone: done,
+      habitsTotal: total,
+      isFullyDone: total > 0 && done >= total,
+    };
+  });
+}
+
+// Intensity for the square: 0 = empty, 1 = partial, 2 = fully done.
+export function cellLevel(cell: DayCell): 0 | 1 | 2 {
+  if (cell.habitsTotal === 0 || cell.habitsDone === 0) return 0;
+  if (cell.isFullyDone) return 2;
+  return 1;
+}
+
+export function fullyDoneKeys(cells: DayCell[]): Set<string> {
+  const s = new Set<string>();
+  for (const c of cells) if (c.isFullyDone) s.add(c.date);
+  return s;
+}

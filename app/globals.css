@@ -6,39 +6,72 @@
   * {
     box-sizing: border-box;
   }
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
   body {
-    font-family: var(--font-outfit), system-ui, sans-serif;
+    font-family: var(--font-hanken), system-ui, sans-serif;
+    text-rendering: optimizeLegibility;
+  }
+  ::selection {
+    background: #8a2a38;
+    color: #efe6d6;
+  }
+  :focus-visible {
+    outline: 2px solid #be9862;
+    outline-offset: 2px;
+    border-radius: 2px;
   }
 }
 
-.grain {
-  position: relative;
-}
-.grain::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0.05;
-  mix-blend-mode: overlay;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
-}
-
+/* Live/done pulse, earthy green. */
 @keyframes pulse-dot {
-  0% { box-shadow: 0 0 0 0 rgba(193, 102, 63, 0.45); }
-  70% { box-shadow: 0 0 0 8px rgba(193, 102, 63, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(193, 102, 63, 0); }
+  0% {
+    box-shadow: 0 0 0 0 rgba(111, 149, 87, 0.5);
+  }
+  70% {
+    box-shadow: 0 0 0 7px rgba(111, 149, 87, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(111, 149, 87, 0);
+  }
 }
 .pulse-dot {
-  animation: pulse-dot 2.4s infinite;
+  animation: pulse-dot 2.6s cubic-bezier(0.23, 1, 0.32, 1) infinite;
 }
 
+/* Subtle staggered entrance for lists and cards. */
 @keyframes rise-in {
-  from { opacity: 0; transform: translateY(6px) scale(0.94); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 .rise-in {
-  animation: rise-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: rise-in 0.5s cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+/* Thin, restrained scrollbar for the horizontally scrolling graph. */
+.thin-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #463d33 transparent;
+}
+.thin-scroll::-webkit-scrollbar {
+  height: 8px;
+}
+.thin-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.thin-scroll::-webkit-scrollbar-thumb {
+  background: #342e27;
+  border-radius: 6px;
+}
+.thin-scroll::-webkit-scrollbar-thumb:hover {
+  background: #463d33;
 }
 
 @media (prefers-reduced-motion: reduce) {

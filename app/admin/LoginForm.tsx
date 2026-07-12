@@ -42,14 +42,14 @@ export default function LoginForm() {
             value={passcode}
             onChange={(e) => setPasscode(e.target.value)}
             autoFocus
-            className="w-full rounded-[8px] border border-border bg-elev2 px-3.5 py-2.5 text-[14.5px] text-ink outline-none focus:border-accent"
+            className="w-full rounded-[8px] border border-border bg-elev2 px-3.5 py-2.5 text-[14.5px] text-ink outline-none focus:border-done"
             placeholder="Passphrase"
           />
           {error && <p className="mt-2 text-[13px] text-danger">{error}</p>}
           <button
             type="submit"
             disabled={busy}
-            className="mt-4 w-full rounded-[8px] bg-accent px-4 py-2.5 text-[14.5px] font-medium text-accentink transition active:translate-y-[1px] active:scale-[0.98] disabled:opacity-60"
+            className="mt-4 w-full rounded-[8px] bg-done px-4 py-2.5 text-[14.5px] font-medium text-doneink transition active:translate-y-[1px] active:scale-[0.98] disabled:opacity-60"
           >
             {busy ? "Checking..." : "Enter"}
           </button>

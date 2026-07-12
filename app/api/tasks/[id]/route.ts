@@ -6,12 +6,19 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   if (!isAdmin(req)) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const body = await req.json().catch(() => ({}));
-  if (typeof body.done !== "boolean") {
-    return NextResponse.json({ error: "done (boolean) required" }, { status: 400 });
+  const update: { done?: boolean; text?: string } = {};
+  if (typeof body.done === "boolean") update.done = body.done;
+  if (typeof body.text === "string") {
+    const text = body.text.trim();
+    if (!text) return NextResponse.json({ error: "text cannot be empty" }, { status: 400 });
+    update.text = text;
+  }
+  if (Object.keys(update).length === 0) {
+    return NextResponse.json({ error: "nothing to update" }, { status: 400 });
   }
 
   const sb = supabaseServer();
-  const { error } = await sb.from("tasks").update({ done: body.done }).eq("id", params.id);
+  const { error } = await sb.from("tasks").update(update).eq("id", params.id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });
 }

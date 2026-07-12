@@ -1,296 +1,263 @@
 import { supabaseServer } from "@/lib/supabase";
-import { computeStreaks, daysUntil, dueLabel, lastNDays, startOfToday, toKey } from "@/lib/streaks";
+import {
+  buildContribution,
+  computeStreaks,
+  fullyDoneKeys,
+  lastNDays,
+  toKey,
+  startOfToday,
+  type HabitMeta,
+} from "@/lib/streaks";
+import ContributionsGraph from "@/app/components/ContributionsGraph";
 
 export const dynamic = "force-dynamic";
 
-const DAYS_SHOWN = 63;
-const LOG_DAYS_SHOWN = 14;
+const DAYS = 371; // ~53 weeks
 
-function fmt(d: Date) {
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-}
-
+type Habit = { id: string; name: string; created_at: string };
+type LogRow = { habit_id: string; log_date: string };
 type TaskRow = {
   id: string;
-  list_id: string;
-  log_date: string;
-  due_date: string | null;
   text: string;
-  done: boolean;
+  log_date: string;
+  list: { name: string } | { name: string }[] | null;
 };
 
+type PublicData = {
+  habits: Habit[];
+  doneByDay: Map<string, Set<string>>;
+  todayDone: Set<string>;
+  tasksByDay: { date: string; items: { text: string; list: string | null }[] }[];
+  ok: boolean;
+};
+
+async function getData(): Promise<PublicData> {
+  const empty: PublicData = {
+    habits: [],
+    doneByDay: new Map(),
+    todayDone: new Set(),
+    tasksByDay: [],
+    ok: false,
+  };
+
+  try {
+    const sb = supabaseServer();
+    const startKey = toKey(lastNDays(DAYS)[0]);
+    const todayKey = toKey(startOfToday());
+
+    const [habitsRes, logsRes, tasksRes] = await Promise.all([
+      sb.from("habits").select("id, name, created_at").order("sort_order"),
+      sb
+        .from("habit_logs")
+        .select("habit_id, log_date")
+        .eq("done", true)
+        .gte("log_date", startKey),
+      sb
+        .from("tasks")
+        .select("id, text, log_date, list:lists(name)")
+        .eq("done", true)
+        .order("log_date", { ascending: false })
+        .order("created_at", { ascending: false })
+        .limit(200),
+    ]);
+
+    if (habitsRes.error || logsRes.error || tasksRes.error) return empty;
+
+    const habits = (habitsRes.data ?? []) as Habit[];
+    const logs = (logsRes.data ?? []) as LogRow[];
+    const tasks = (tasksRes.data ?? []) as TaskRow[];
+
+    const doneByDay = new Map<string, Set<string>>();
+    for (const l of logs) {
+      let set = doneByDay.get(l.log_date);
+      if (!set) {
+        set = new Set<string>();
+        doneByDay.set(l.log_date, set);
+      }
+      set.add(l.habit_id);
+    }
+    const todayDone = doneByDay.get(todayKey) ?? new Set<string>();
+
+    const grouped = new Map<string, { text: string; list: string | null }[]>();
+    for (const t of tasks) {
+      const listName = Array.isArray(t.list)
+        ? (t.list[0]?.name ?? null)
+        : (t.list?.name ?? null);
+      const arr = grouped.get(t.log_date) ?? [];
+      arr.push({ text: t.text, list: listName });
+      grouped.set(t.log_date, arr);
+    }
+    const tasksByDay = Array.from(grouped.entries())
+      .sort((a, b) => (a[0] < b[0] ? 1 : -1))
+      .map(([date, items]) => ({ date, items }));
+
+    return { habits, doneByDay, todayDone, tasksByDay, ok: true };
+  } catch {
+    return empty;
+  }
+}
+
+function longDate(key: string): string {
+  return new Date(`${key}T00:00:00`).toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
+}
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <h2 className="font-mono text-xs uppercase tracking-[0.18em] text-brass">
+      {children}
+    </h2>
+  );
+}
+
 export default async function PublicPage() {
-  const sb = supabaseServer();
-  const today = startOfToday();
-  const todayKey = toKey(today);
-  const range = lastNDays(DAYS_SHOWN, today);
-  const rangeStartKey = toKey(range[0]);
+  const { habits, doneByDay, todayDone, tasksByDay, ok } = await getData();
 
-  const [{ data: habits }, { data: logs }, { data: lists }, { data: tasks }] = await Promise.all([
-    sb.from("habits").select("id, name").order("sort_order", { ascending: true }),
-    sb
-      .from("habit_logs")
-      .select("habit_id, log_date, done")
-      .gte("log_date", rangeStartKey)
-      .eq("done", true),
-    sb.from("lists").select("id, name").order("sort_order", { ascending: true }),
-    sb
-      .from("tasks")
-      .select("id, list_id, log_date, due_date, text, done")
-      .order("log_date", { ascending: false })
-      .order("sort_order", { ascending: true })
-      .limit(500),
-  ]);
+  const days = lastNDays(DAYS);
+  const habitMeta: HabitMeta[] = habits.map((h) => ({
+    id: h.id,
+    created_at: h.created_at,
+  }));
+  const cells = buildContribution(days, habitMeta, doneByDay);
+  const { current, best } = computeStreaks(fullyDoneKeys(cells));
 
-  const logsByHabit = new Map<string, Set<string>>();
-  for (const row of logs ?? []) {
-    const set = logsByHabit.get(row.habit_id) ?? new Set<string>();
-    set.add(row.log_date);
-    logsByHabit.set(row.habit_id, set);
-  }
-
-  const tasksByList = new Map<string, TaskRow[]>();
-  for (const t of (tasks ?? []) as TaskRow[]) {
-    const list = tasksByList.get(t.list_id) ?? [];
-    list.push(t);
-    tasksByList.set(t.list_id, list);
-  }
+  const doneByDayRecord: Record<string, string[]> = {};
+  doneByDay.forEach((set, key) => {
+    doneByDayRecord[key] = Array.from(set);
+  });
 
   return (
-    <div className="pb-20">
-      <div className="mx-auto max-w-2xl px-5">
-        <header className="grain border-b border-border py-14">
-          <div className="mb-3.5 flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.14em] text-accent">
-            <span className="pulse-dot h-1.5 w-1.5 rounded-full bg-accent" />
-            Live, updated daily
-          </div>
-          <h1 className="font-display text-[clamp(30px,7vw,44px)] font-semibold tracking-tight text-ink">
-            Proof
-          </h1>
-          <p className="mt-2.5 max-w-[420px] text-[14.5px] leading-relaxed text-inkdim">
-            Everything I say I&apos;m doing, kept in a public ledger. No filter, no
-            excuses. Just the record.
-          </p>
-        </header>
+    <main className="mx-auto max-w-4xl px-5 py-16 sm:px-8 sm:py-24">
+      {/* Hero */}
+      <header className="rise-in">
+        <div className="flex items-center gap-2 font-mono text-xs uppercase tracking-[0.18em] text-inkdim">
+          <span
+            className="pulse-dot inline-block h-2 w-2 rounded-full bg-done"
+            aria-hidden
+          />
+          <span>{ok ? "live" : "offline"}</span>
+        </div>
+        <h1 className="mt-4 font-display text-5xl font-semibold tracking-tight text-ink sm:text-6xl">
+          Proof of Work
+        </h1>
+        <p className="mt-4 max-w-[52ch] text-lg leading-relaxed text-inkdim">
+          Every day, in the open. Habits kept and work shipped, with no editing
+          the past.
+        </p>
+      </header>
 
-        <section className="border-b border-border py-9">
-          <div className="mb-5 flex items-baseline justify-between">
-            <h2 className="font-mono text-[11px] uppercase tracking-[0.12em] text-inkfaint">
-              Habits
-            </h2>
-            <span className="font-mono text-[11px] text-inkfaint">
-              {fmt(range[0])} to {fmt(range[range.length - 1])}
-            </span>
+      {/* Contributions + streaks */}
+      <section className="mt-16 rise-in" style={{ animationDelay: "60ms" }}>
+        <div className="flex flex-wrap items-end justify-between gap-6">
+          <SectionLabel>Contributions</SectionLabel>
+          <div className="flex gap-8">
+            <div>
+              <div className="font-display text-3xl font-semibold tabular-nums text-done">
+                {current}
+              </div>
+              <div className="mt-0.5 font-mono text-[11px] uppercase tracking-wider text-inkfaint">
+                day streak
+              </div>
+            </div>
+            <div>
+              <div className="font-display text-3xl font-semibold tabular-nums text-ink">
+                {best}
+              </div>
+              <div className="mt-0.5 font-mono text-[11px] uppercase tracking-wider text-inkfaint">
+                longest
+              </div>
+            </div>
           </div>
+        </div>
 
-          {!habits || habits.length === 0 ? (
-            <div className="py-5 text-center font-mono text-[13.5px] text-inkfaint">
+        <div className="mt-6 rounded-lg border border-border bg-elev/40 p-4 sm:p-6">
+          {habits.length === 0 ? (
+            <p className="py-8 text-center text-sm text-inkdim">
               No habits tracked yet.
-            </div>
+            </p>
           ) : (
-            <div className="space-y-3.5">
-              {habits.map((h) => {
-                const doneDates = logsByHabit.get(h.id) ?? new Set<string>();
-                const { current, best } = computeStreaks(doneDates, today);
-                return (
-                  <div
-                    key={h.id}
-                    className="rounded-[10px] border border-border bg-elev px-[18px] py-4"
-                  >
-                    <div className="mb-3.5 flex items-start justify-between gap-3">
-                      <div className="font-display text-[18px] font-semibold text-ink">
-                        {h.name}
-                      </div>
-                      <div className="flex flex-shrink-0 gap-3.5">
-                        <div className="text-right">
-                          <div className="font-mono text-[18px] font-medium leading-none text-accent">
-                            {current}
-                          </div>
-                          <div className="mt-1 font-mono text-[9.5px] uppercase tracking-[0.08em] text-inkfaint">
-                            Streak
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <div className="font-mono text-[18px] font-medium leading-none text-accent">
-                            {best}
-                          </div>
-                          <div className="mt-1 font-mono text-[9.5px] uppercase tracking-[0.08em] text-inkfaint">
-                            Best
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap gap-1">
-                      {range.map((d) => {
-                        const key = toKey(d);
-                        const on = doneDates.has(key);
-                        const isToday = key === todayKey;
-                        return (
-                          <div
-                            key={key}
-                            title={key + (on ? " done" : "")}
-                            className={`h-3 w-3 flex-shrink-0 rounded-[3px] border ${
-                              on ? "border-accent bg-accent" : "border-border bg-elev2"
-                            } ${isToday ? "ring-1 ring-inkdim" : ""}`}
-                          />
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            <ContributionsGraph
+              cells={cells}
+              habits={habits}
+              doneByDay={doneByDayRecord}
+            />
           )}
-        </section>
+        </div>
+      </section>
 
-        {(lists ?? []).map((list) => {
-          const allTasks = tasksByList.get(list.id) ?? [];
-          const goals = allTasks
-            .filter((t) => t.due_date)
-            .sort((a, b) => (a.due_date! < b.due_date! ? -1 : 1));
-          const logTasks = allTasks.filter((t) => !t.due_date);
+      {/* Today's habits (read-only) */}
+      <section className="mt-16 rise-in" style={{ animationDelay: "120ms" }}>
+        <SectionLabel>Habits — Today</SectionLabel>
+        <ul className="mt-6 divide-y divide-border">
+          {habits.length === 0 && (
+            <li className="py-4 text-sm text-inkdim">No habits tracked yet.</li>
+          )}
+          {habits.map((h) => {
+            const done = todayDone.has(h.id);
+            return (
+              <li key={h.id} className="flex items-center gap-3 py-3">
+                <span
+                  className={`flex h-5 w-5 items-center justify-center rounded-[4px] border text-[11px] ${
+                    done
+                      ? "border-done bg-done text-doneink"
+                      : "border-border bg-elev2 text-transparent"
+                  }`}
+                  aria-hidden
+                >
+                  ✓
+                </span>
+                <span className={done ? "text-ink" : "text-inkdim"}>
+                  {h.name}
+                </span>
+                <span className="ml-auto font-mono text-[11px] uppercase tracking-wider text-inkfaint">
+                  {done ? "done" : "open"}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
 
-          const dayKeys = Array.from(new Set(logTasks.map((t) => t.log_date)))
-            .sort()
-            .reverse()
-            .slice(0, LOG_DAYS_SHOWN);
-          const todayHasTasks = logTasks.some((t) => t.log_date === todayKey);
-
-          return (
-            <section key={list.id} className="border-b border-border py-9">
-              <div className="mb-5 flex items-baseline justify-between">
-                <h2 className="font-display text-[19px] font-semibold text-ink">{list.name}</h2>
-                {dayKeys.length > 0 && (
-                  <span className="font-mono text-[11px] text-inkfaint">
-                    last {dayKeys.length} days
-                  </span>
-                )}
-              </div>
-
-              {goals.length > 0 && (
-                <div className="mb-6 space-y-1.5">
-                  {goals.map((t) => {
-                    const diff = daysUntil(t.due_date!, today);
-                    const overdue = diff < 0 && !t.done;
-                    return (
-                      <div
-                        key={t.id}
-                        className="flex items-center gap-2.5 rounded-[8px] border border-border bg-elev px-3.5 py-2.5"
-                      >
-                        <div
-                          className={`flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-[4px] border ${
-                            t.done ? "border-accent bg-accent" : "border-inkfaint"
-                          }`}
-                        >
-                          {t.done && (
-                            <svg width="8" height="6" viewBox="0 0 8 6" fill="none">
-                              <path
-                                d="M1 3L3 5L7 1"
-                                stroke="#131512"
-                                strokeWidth="1.5"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              />
-                            </svg>
-                          )}
-                        </div>
-                        <div
-                          className={`flex-1 text-[14.5px] ${
-                            t.done ? "text-inkdim line-through" : "text-ink"
-                          }`}
-                        >
-                          {t.text}
-                        </div>
-                        <div
-                          className={`flex-shrink-0 font-mono text-[10.5px] uppercase tracking-[0.05em] ${
-                            overdue ? "text-danger" : "text-inkfaint"
-                          }`}
-                        >
-                          {dueLabel(diff)}
-                        </div>
-                      </div>
-                    );
-                  })}
+      {/* Build log */}
+      <section className="mt-16 rise-in" style={{ animationDelay: "180ms" }}>
+        <SectionLabel>Build Log</SectionLabel>
+        {tasksByDay.length === 0 ? (
+          <p className="mt-6 text-sm text-inkdim">Nothing shipped yet.</p>
+        ) : (
+          <div className="mt-6 space-y-8">
+            {tasksByDay.map((group) => (
+              <div key={group.date}>
+                <div className="font-mono text-[11px] uppercase tracking-wider text-inkfaint">
+                  {longDate(group.date)}
                 </div>
-              )}
-
-              {!todayHasTasks && (
-                <div className="mb-5">
-                  <div className="mb-2 font-mono text-[11px] uppercase tracking-[0.06em] text-accent">
-                    Today, {fmt(today)}
-                  </div>
-                  <div className="py-2.5 font-mono text-[13.5px] text-inkfaint">
-                    Nothing logged yet today.
-                  </div>
-                </div>
-              )}
-
-              <div className="space-y-5">
-                {dayKeys.map((key) => {
-                  const d = new Date(`${key}T00:00:00`);
-                  const isToday = key === todayKey;
-                  return (
-                    <div key={key}>
-                      <div
-                        className={`mb-2 font-mono text-[11px] uppercase tracking-[0.06em] ${
-                          isToday ? "text-accent" : "text-inkfaint"
-                        }`}
-                      >
-                        {isToday ? "Today, " : ""}
-                        {fmt(d)}
-                      </div>
-                      {logTasks
-                        .filter((t) => t.log_date === key)
-                        .map((t) => (
-                          <div
-                            key={t.id}
-                            className="flex items-start gap-2.5 border-b border-border py-2 text-[14.5px] last:border-none"
-                          >
-                            <div
-                              className={`mt-0.5 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-[4px] border ${
-                                t.done ? "border-accent bg-accent" : "border-inkfaint"
-                              }`}
-                            >
-                              {t.done && (
-                                <svg width="8" height="6" viewBox="0 0 8 6" fill="none">
-                                  <path
-                                    d="M1 3L3 5L7 1"
-                                    stroke="#131512"
-                                    strokeWidth="1.5"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                  />
-                                </svg>
-                              )}
-                            </div>
-                            <div className={t.done ? "text-inkdim line-through" : "text-ink"}>
-                              {t.text}
-                            </div>
-                          </div>
-                        ))}
-                    </div>
-                  );
-                })}
-                {dayKeys.length === 0 && goals.length === 0 && (
-                  <div className="py-5 text-center font-mono text-[13.5px] text-inkfaint">
-                    No entries yet.
-                  </div>
-                )}
+                <ul className="mt-3 space-y-2">
+                  {group.items.map((item, i) => (
+                    <li key={i} className="flex items-baseline gap-3">
+                      <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-brass" />
+                      <span className="text-ink">{item.text}</span>
+                      {item.list && (
+                        <span className="ml-auto shrink-0 font-mono text-[10px] uppercase tracking-wider text-inkfaint">
+                          {item.list}
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
               </div>
-            </section>
-          );
-        })}
-
-        {(!lists || lists.length === 0) && (
-          <section className="py-9 text-center font-mono text-[13.5px] text-inkfaint">
-            No lists yet.
-          </section>
+            ))}
+          </div>
         )}
+      </section>
 
-        <footer className="border-t border-border pt-8 text-center font-mono text-[11px] text-inkfaint">
-          proof of work, kept in public
-        </footer>
-      </div>
-    </div>
+      {/* Footer */}
+      <footer className="mt-24 border-t border-border pt-6">
+        <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-inkfaint">
+          proof over promises · built with CRAFT-grade craft
+        </p>
+      </footer>
+    </main>
   );
 }
