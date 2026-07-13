@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Fraunces, Hanken_Grotesk, IBM_Plex_Mono } from "next/font/google";
+import { Fraunces, Hanken_Grotesk, IBM_Plex_Mono, Oswald } from "next/font/google";
 import "./globals.css";
 
 const fraunces = Fraunces({
@@ -7,6 +7,12 @@ const fraunces = Fraunces({
   weight: ["400", "500", "600"],
   style: ["normal", "italic"],
   variable: "--font-fraunces",
+});
+
+const oswald = Oswald({
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+  variable: "--font-oswald",
 });
 
 const hanken = Hanken_Grotesk({
@@ -31,7 +37,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html
       lang="en"
-      className={`${fraunces.variable} ${hanken.variable} ${plexMono.variable}`}
+      className={`${fraunces.variable} ${hanken.variable} ${plexMono.variable} ${oswald.variable}`}
     >
       <body className="bg-bg text-ink font-sans antialiased">{children}</body>
     </html>

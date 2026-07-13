@@ -44,8 +44,8 @@ function formatFull(key: string): string {
 }
 
 function levelClass(level: 0 | 1 | 2): string {
-  if (level === 2) return "bg-done border-done";
-  if (level === 1) return "bg-donedim border-donedim";
+  if (level === 2) return "bg-done border-done cell-lit";
+  if (level === 1) return "bg-donedim border-donedim cell-half";
   return "bg-elev2 border-border";
 }
 

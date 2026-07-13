@@ -30,6 +30,8 @@ const config: Config = {
         display: ["var(--font-fraunces)", "Georgia", "serif"],
         sans: ["var(--font-hanken)", "system-ui", "sans-serif"],
         mono: ["var(--font-plex-mono)", "ui-monospace", "monospace"],
+        // Condensed, heavy face for HUD readouts (level, XP, streak counts).
+        stat: ["var(--font-oswald)", "var(--font-plex-mono)", "monospace"],
       },
       transitionTimingFunction: {
         out: "cubic-bezier(0.23, 1, 0.32, 1)",

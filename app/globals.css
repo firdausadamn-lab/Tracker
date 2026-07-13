@@ -24,6 +24,20 @@
   }
 }
 
+/* =====================================================================
+   Glow — the single highest-impact "game" cue. Flat color reads as UI;
+   colored box/text-shadow reads as lit.
+   ===================================================================== */
+.glow-green {
+  box-shadow: 0 0 14px rgba(111, 149, 87, 0.45);
+}
+.txtglow-green {
+  text-shadow: 0 0 18px rgba(111, 149, 87, 0.55);
+}
+.txtglow-brass {
+  text-shadow: 0 0 14px rgba(190, 152, 98, 0.4);
+}
+
 /* Live/done pulse, earthy green. */
 @keyframes pulse-dot {
   0% {
@@ -55,6 +69,124 @@
   animation: rise-in 0.5s cubic-bezier(0.23, 1, 0.32, 1) both;
 }
 
+/* =====================================================================
+   XP bar — recessed track, gradient + glowing fill, sweeping shimmer.
+   ===================================================================== */
+.xp-track {
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.7), inset 0 0 0 1px rgba(0, 0, 0, 0.35);
+}
+.xp-fill {
+  background: linear-gradient(180deg, #8bb06d 0%, #6f9557 55%, #567744 100%);
+  box-shadow: 0 0 14px rgba(111, 149, 87, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+/* fill sweeps up to its value on load */
+@keyframes xp-grow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+.xp-grow {
+  transform-origin: left;
+  animation: xp-grow 0.95s cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+/* a light sweep travels across the filled portion */
+.xp-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 20%,
+    rgba(255, 255, 255, 0.4) 50%,
+    transparent 80%
+  );
+  transform: translateX(-120%);
+  animation: xp-shimmer 2.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+@keyframes xp-shimmer {
+  0% {
+    transform: translateX(-120%);
+  }
+  55%,
+  100% {
+    transform: translateX(240%);
+  }
+}
+
+/* =====================================================================
+   Level shield — a framed sigil around the level number.
+   ===================================================================== */
+.shield {
+  clip-path: polygon(50% 0%, 100% 14%, 100% 62%, 50% 100%, 0% 62%, 0% 14%);
+  box-shadow: inset 0 0 0 2px rgba(190, 152, 98, 0.6);
+  filter: drop-shadow(0 0 16px rgba(111, 149, 87, 0.25));
+}
+
+/* =====================================================================
+   Achievement badges — hexagon sigil, inner rim, glow when lit.
+   (Outer glow uses filter, not box-shadow, since clip-path clips shadows.)
+   ===================================================================== */
+.badge-hex {
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  box-shadow: inset 0 0 0 1.5px var(--rim, #342e27);
+}
+.badge-lit {
+  filter: drop-shadow(0 0 9px rgba(111, 149, 87, 0.55));
+}
+@keyframes badge-in {
+  from {
+    opacity: 0;
+    transform: scale(0.82);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.badge-in {
+  animation: badge-in 0.5s cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+/* unlock moment: scale-in with a brief overshoot + settle */
+@keyframes badge-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+  55% {
+    opacity: 1;
+    transform: scale(1.09);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.badge-pop {
+  animation: badge-pop 0.5s cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+/* CSS-only tooltip for the trophy case (no JS on the server-rendered page). */
+.badge-tip {
+  opacity: 0;
+  transform: translate(-50%, 4px);
+  transition: opacity 0.16s ease-out, transform 0.16s cubic-bezier(0.23, 1, 0.32, 1);
+}
+.group:hover .badge-tip,
+.group:focus-within .badge-tip {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+/* Lit contribution square — glows; unlit stays recessed. */
+.cell-lit {
+  box-shadow: 0 0 6px rgba(111, 149, 87, 0.7);
+}
+.cell-half {
+  box-shadow: 0 0 4px rgba(111, 149, 87, 0.3);
+}
+
 /* Thin, restrained scrollbar for the horizontally scrolling graph. */
 .thin-scroll {
   scrollbar-width: thin;
@@ -74,46 +206,13 @@
   background: #463d33;
 }
 
-/* XP bar fill sweeps up to its value on load. */
-@keyframes xp-grow {
-  from {
-    transform: scaleX(0);
-  }
-  to {
-    transform: scaleX(1);
-  }
-}
-.xp-grow {
-  transform-origin: left;
-  animation: xp-grow 0.9s cubic-bezier(0.23, 1, 0.32, 1) both;
-}
-
-/* Achievement badge: a hexagon sigil with an inner rim (brass when lit). */
-.badge-hex {
-  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
-  box-shadow: inset 0 0 0 1.5px var(--rim, #342e27);
-}
-
-/* Each badge scales/glows in — a small moment, staggered, not a burst. */
-@keyframes badge-in {
-  from {
-    opacity: 0;
-    transform: scale(0.82);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-.badge-in {
-  animation: badge-in 0.5s cubic-bezier(0.23, 1, 0.32, 1) both;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .pulse-dot,
   .rise-in,
   .xp-grow,
-  .badge-in {
+  .xp-shimmer::after,
+  .badge-in,
+  .badge-pop {
     animation: none !important;
   }
 }

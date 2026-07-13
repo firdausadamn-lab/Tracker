@@ -185,7 +185,7 @@ export default function AdminDashboard({
           </div>
           <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-elev2">
             <div
-              className="h-full rounded-full bg-done"
+              className="h-full rounded-full bg-done shadow-[0_0_8px_rgba(111,149,87,0.55)] transition-[width] duration-500 ease-out"
               style={{ width: `${hud.xpNeed ? Math.round((hud.xpInto / hud.xpNeed) * 100) : 0}%` }}
             />
           </div>
@@ -242,7 +242,7 @@ export default function AdminDashboard({
                         title={key}
                         disabled={pending}
                         className={`h-4 w-4 flex-shrink-0 rounded-[3px] border transition active:scale-90 ${
-                          on ? "border-done bg-done" : "border-border bg-elev2 hover:border-inkdim"
+                          on ? "border-done bg-done shadow-[0_0_7px_rgba(111,149,87,0.6)]" : "border-border bg-elev2 hover:border-inkdim"
                         } ${isToday ? "ring-1 ring-inkdim" : ""}`}
                       />
                     );
