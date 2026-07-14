@@ -13,5 +13,14 @@ export function supabaseServer() {
   }
   return createClient(url, key, {
     auth: { persistSession: false },
+    // Next.js patches global fetch and caches GET responses in a persistent
+    // on-disk Data Cache. That cache once stored empty results (from before any
+    // habits existed) and kept serving them to the cacheable "/" route, so the
+    // public page read 0 rows while the cookie-gated (never-cached) admin page
+    // read live data. A server client backed by the service role key must always
+    // reflect live state, so opt every request out of the Data Cache.
+    global: {
+      fetch: (input, init) => fetch(input, { ...init, cache: "no-store" }),
+    },
   });
 }
